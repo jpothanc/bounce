@@ -1,0 +1,28 @@
+Run in Linux
+chmod +x gradlew
+ls -l gradlew
+./gradlew bootrun
+
+Install gradlew
+sudo apt update
+sudo apt install gradle -y
+
+
+gradle
+sudo chmod -R a+wx /opt/gradle
+ls -ld /opt/gradle
+wget https://services.gradle.org/distributions/gradle-8.6-bin.zip
+sudo unzip -d /opt/gradle gradle-8.6-bin.zip
+
+echo 'export PATH=$PATH:/opt/gradle/gradle-8.6/bin' >> ~/.bashrc
+source ~/.bashrc
+gradle -v
+
+azureuser@amps-vm-test-01:~/projects/bounce$ gradle wrapper
+The Gradle Wrapper (gradlew) is a script that automatically downloads and runs the correct Gradle version for a project. It ensures that all developers and CI/CD environments 
+use the same Gradle version, avoiding compatibility issues.
+
+
+Java 
+
+./gradlew build
