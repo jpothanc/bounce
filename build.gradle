@@ -24,21 +24,13 @@ repositories {
 }
 
 dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 	implementation 'org.apache.camel:camel-core:4.4.4'
 	implementation 'org.apache.camel.springboot:camel-spring-boot-starter:4.4.4'
+	implementation 'org.apache.camel:camel-resilience4j:4.4.0'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
- 	implementation 'org.slf4j:slf4j-api:2.0.9'
-    
-    // Logback implementation
-    implementation 'ch.qos.logback:logback-classic:1.4.11'
-    implementation 'ch.qos.logback:logback-core:1.4.11'
-    
-    // Optional: SLF4J extensions
-    implementation 'org.slf4j:jul-to-slf4j:2.0.9'
-    implementation 'org.slf4j:log4j-over-slf4j:2.0.9'
-
 	implementation 'com.github.oshi:oshi-core:6.4.8'
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'

@@ -1,5 +1,6 @@
 package com.ib.it.bounce.routes;
 
+import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.Exchange;
 import org.springframework.stereotype.Component;
@@ -13,11 +14,11 @@ public class ProcessSelfHealingRoute extends RouteBuilder {
     @Override
     public void configure() {
         // Global error handler
-        // errorHandler(defaultErrorHandler()
-        //     .maximumRedeliveries(3)
-        //     .redeliveryDelay(1000)
-        //     .backOffMultiplier(2)
-        //     .retryAttemptedLogLevel(LoggingLevel.WARN));
+         errorHandler(defaultErrorHandler()
+             .maximumRedeliveries(3)
+             .redeliveryDelay(1000)
+             .backOffMultiplier(2)
+             .retryAttemptedLogLevel(LoggingLevel.WARN));
 
         // Circuit Breaker pattern for process monitoring
         from("timer:processHealthCheck?period=30000")
