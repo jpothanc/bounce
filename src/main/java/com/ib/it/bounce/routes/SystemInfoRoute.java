@@ -25,7 +25,7 @@ public class SystemInfoRoute extends RouteBuilder {
 
     @Override
     public void configure() {
-        from("timer:systemInfoTimer?period=1000") // Runs every 10 seconds
+        from("timer:systemInfoTimer?period=100000") // Runs every 10 seconds
                 .routeId("system-info-route")
                 .to("direct:fetchSystemInfo")
                 .log("System Info: ${body}");

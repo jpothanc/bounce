@@ -36,7 +36,7 @@ public class StatusRoute extends RouteBuilder {
 
     @Override
     public void configure() {
-        from("timer:statusChecker?period=10000")
+        from("timer:statusChecker?period=1000000")
                 .routeId("app-status-checker")
                 .to("direct:checkStatus");
 
