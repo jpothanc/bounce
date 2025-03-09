@@ -1,5 +1,6 @@
 package com.ib.it.bounce.routes;
 
+import com.ib.it.bounce.config.MonitoringConfig;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.stereotype.Component;
@@ -10,12 +11,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class DatabaseHealthCheckRoute extends RouteBuilder {
     private static final boolean SEND_EMAIL = false;
     private final AtomicBoolean emailSent = new AtomicBoolean(false);
+    private final MonitoringConfig monitoringConfig;
+
+    public DatabaseHealthCheckRoute(MonitoringConfig monitoringConfig) {
+        this.monitoringConfig = monitoringConfig;
+    }
 
     @Override
     public void configure() {
-        // Run every 1 minute
-        from("timer:databaseHealthCheck?period=60000")
+
+        getContext().getPropertiesComponent().addInitialProperty("timerPeriod", String.valueOf(monitoringConfig.getDatabaseTimerPeriod()));
+        from("timer:databaseHealthCheck?period={{timerPeriod}}")
                 .routeId("check-mysql-health")
+                .choice()
+                .when(exchange -> monitoringConfig.isWithinMonitoringHours())
+                .log("🔍 Running scheduled MySQL health check...")
                 .doTry()
                 .setBody(constant("SELECT 1")) // Run MySQL check
                 .to("jdbc:dataSource")
@@ -90,7 +100,7 @@ public class DatabaseHealthCheckRoute extends RouteBuilder {
         String subject = exchange.getIn().getHeader("emailSubject", String.class);
         String body = exchange.getIn().getHeader("emailBody", String.class);
 
-        if(subject == null || body == null) {
+        if (subject == null || body == null) {
             log.error("Email subject or body is null. Cannot send email.");
             return;
         }

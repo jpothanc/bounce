@@ -31,30 +31,47 @@ ext {
 }
 
 dependencies {
+	// Spring Boot Starters
 	implementation 'org.springframework.boot:spring-boot-starter'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 	implementation 'org.springframework.boot:spring-boot-starter-jdbc'
-	implementation 'org.apache.camel:camel-core:4.4.4'
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+	// Apache Camel Spring Boot Starter (Includes camel-core)
 	implementation "org.apache.camel.springboot:camel-spring-boot-starter:${camelVersion}"
 	implementation "org.apache.camel.springboot:camel-jetty-starter:${camelVersion}"
-	implementation 'org.apache.camel:camel-resilience4j:4.4.0'
-	// https://mvnrepository.com/artifact/com.github.ben-manes.caffeine/caffeine
-	implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8'
-	implementation 'org.springframework.boot:spring-boot-starter-actuator'
-	implementation 'com.github.oshi:oshi-core:6.4.8'
-	// database
+
+	// Camel Components
+	implementation "org.apache.camel:camel-resilience4j:${camelVersion}"
 	implementation "org.apache.camel:camel-jdbc:${camelVersion}"
-	implementation 'com.mysql:mysql-connector-j:9.2.0'
+	implementation "org.apache.camel.springboot:camel-quartz-starter:${camelVersion}"
+
+
+	// Caching & Monitoring
+	implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8'
+	implementation 'com.github.oshi:oshi-core:6.4.8'
+
+	// Database Dependencies
 	implementation 'com.zaxxer:HikariCP:5.0.1'
+	implementation 'mysql:mysql-connector-java:8.0.33' // Use a stable version
+
+	// Lombok (Compile Only)
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
-//	testImplementation "org.apache.camel:camel-test:${camelVersion}"
+
+	// Development Tools
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+	// Unit Testing
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'io.projectreactor:reactor-test'
+	testImplementation "org.apache.camel:camel-test-spring-junit5:${camelVersion}"
+
+	testImplementation 'org.mockito:mockito-core:5.6.0'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 }
+
 
 tasks.named('test') {
 	useJUnitPlatform()
