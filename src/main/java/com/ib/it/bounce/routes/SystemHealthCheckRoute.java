@@ -12,9 +12,10 @@ import oshi.hardware.CentralProcessor;
 import oshi.hardware.GlobalMemory;
 import oshi.hardware.HardwareAbstractionLayer;
 import oshi.software.os.OSFileStore;
-import oshi.util.FormatUtil;
 
 import java.io.File;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -58,64 +59,58 @@ public class SystemHealthCheckRoute extends BaseCamelRoute {
         GlobalMemory memory = hardware.getMemory();
         CentralProcessor processor = hardware.getProcessor();
         List<OSFileStore> diskStores = new SystemInfo().getOperatingSystem().getFileSystem().getFileStores();
-
-        // Calculate CPU Load
-        double cpuLoad = processor.getSystemCpuLoad(1000) * 100;
-
-        // Calculate Memory Usage
-        long totalMemory = memory.getTotal();
-        long freeMemory = memory.getAvailable();
-        long usedMemory = totalMemory - freeMemory;
-
-        // Get Disk Space Info
         File root = new File("/");
-        long totalDiskSpace = root.getTotalSpace();
-        long freeDiskSpace = root.getFreeSpace();
-        long usedDiskSpace = totalDiskSpace - freeDiskSpace;
 
-        // Mock system temperature (OSHI does not support all OS)
-        String systemTemperature = "N/A"; // Only available on some Linux systems
+        File tempDir = new File(System.getProperty("java.io.tmpdir"));
+        long totalTempSpace = tempDir.getTotalSpace();
 
-        // Build SystemInfo object using Lombok @Builder
+        String hostname = "Unknown";
+        String ipAddress = "Unknown";
+
+        try {
+            InetAddress inetAddress = InetAddress.getLocalHost();
+            hostname = inetAddress.getHostName();
+            ipAddress = inetAddress.getHostAddress();
+        } catch (UnknownHostException e) {
+            System.err.println("Unable to get hostname and IP: " + e.getMessage());
+        }
+
         return SystemMetrics.builder()
-                .cpuUsage(String.format("%.2f%%", cpuLoad))
-                .totalMemory(FormatUtil.formatBytes(totalMemory))
-                .freeMemory(FormatUtil.formatBytes(freeMemory))
-                .usedMemory(FormatUtil.formatBytes(usedMemory))
-                .totalDiskSpace(FormatUtil.formatBytes(totalDiskSpace))
-                .freeDiskSpace(FormatUtil.formatBytes(freeDiskSpace))
-                .usedDiskSpace(FormatUtil.formatBytes(usedDiskSpace))
-                .systemTemperature(systemTemperature)
+                .hostname(hostname)
+                .ipAddress(ipAddress)
+                .cpuUsage(processor.getSystemCpuLoad(1000) * 100)
+                .totalMemory(memory.getTotal())
+                .freeMemory(memory.getAvailable())
+                .usedMemory(memory.getTotal() - memory.getAvailable())
+                .totalDiskSpace(root.getTotalSpace())
+                .freeDiskSpace(root.getFreeSpace())
+                .totalTempSpace(totalTempSpace)
+                .usedDiskSpace(root.getTotalSpace() - root.getFreeSpace())
                 .build();
     }
 
     private void checkAndSendMemoryAlert(SystemMetrics system, Exchange exchange) {
-        long freeMemoryMB = 400;
+        long freeMemoryMB = system.getFreeMemory() / (1024 * 1024);
+        boolean isLowMemory = freeMemoryMB < 500;
+        String emailSubject = "";
+        String emailBody = "";
 
-        if (freeMemoryMB < 500 && !emailSent.get()) { // ✅ If free memory is below 500MB
-            System.out.println("⚠️ Low Memory Detected! Sending Email Alert...");
-
-            exchange.getMessage().setHeader("sourceRoute", exchange.getFromRouteId());
-            exchange.getMessage().setHeader("emailSubject", "⚠️ Low Memory Alert!");
-            exchange.getMessage().setHeader("emailBody",
-                    "Warning: Free memory is low (" + freeMemoryMB + "MB).\n" +
-                            "Please check the system.");
-            exchange.getMessage().setHeader("emailRecipient", EmailConfig.TEAM_DEVELOPMENT);
-
-            exchange.getContext().createProducerTemplate().send("direct:sendEmail", exchange);
+        if (isLowMemory && !emailSent.get()) {
+            emailSubject =  system.getHostname() + " : Low Memory Alert!";
+            emailBody = "Warning: Free memory is low (" + freeMemoryMB + "MB).\n" +
+                    "Please check the system.";
             emailSent.set(true);
+        } else if (!isLowMemory && emailSent.get()) {
+            emailSubject = system.getHostname() + ": Memory Recovered";
+            emailBody = "Memory is back to normal.";
+            emailSent.set(false);
         }
-        else if(freeMemoryMB > 500 && emailSent.get()) {
-                System.out.println("✅ Memory is back to normal. Sending Recovery Email...");
-                exchange.getMessage().setHeader("sourceRoute", exchange.getFromRouteId());
-                exchange.getMessage().setHeader("emailSubject", "✅ Memory Recovered");
-                exchange.getMessage().setHeader("emailBody", "Memory is back to normal.");
-                exchange.getMessage().setHeader("emailRecipient", EmailConfig.TEAM_DEVELOPMENT);
+        exchange.getMessage().setHeader("sourceRoute", exchange.getFromRouteId());
+        exchange.getMessage().setHeader("emailSubject", emailSubject);
+        exchange.getMessage().setHeader("emailBody", emailBody);
+        sendEmail(exchange, EmailConfig.TEAM_DEVELOPMENT);
+    }
 
-                exchange.getContext().createProducerTemplate().send("direct:sendEmail", exchange);
-                emailSent.set(false);
-            }
-        }
 }
 
 

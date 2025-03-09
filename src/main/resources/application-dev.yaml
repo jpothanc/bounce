@@ -31,8 +31,8 @@
 
 
   monitoring:
-    start-time: "01:00"
-    end-time: "06:55"
+    start-time: "07:00"
+    end-time: "23:55"
     allowed-days:
       - MONDAY
       - TUESDAY

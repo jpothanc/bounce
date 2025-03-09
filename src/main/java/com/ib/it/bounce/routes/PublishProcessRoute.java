@@ -19,7 +19,8 @@ public class PublishProcessRoute extends BaseCamelRoute {
 
     private final Set<String> MONITORED_APPS = Set.of("notepad.exe", "chrome.exe", "firefox.exe");
 
-    public PublishProcessRoute(CamelContext camelContext, MemoryCache<String, Object> memoryCache,
+    public PublishProcessRoute(CamelContext camelContext,
+                               MemoryCache<String, Object> memoryCache,
                                MonitoringConfig monitoringConfig) {
         super(camelContext, memoryCache, monitoringConfig);
     }

@@ -8,10 +8,11 @@ import org.apache.camel.builder.RouteBuilder;
 
 public abstract class BaseCamelRoute extends RouteBuilder {
     protected final CamelContext camelContext;
-    protected MemoryCache<String, Object> memoryCache;
+    protected final MemoryCache<String, Object> memoryCache;
     protected final MonitoringConfig monitoringConfig;
 
-    public BaseCamelRoute(CamelContext camelContext, MemoryCache<String, Object> memoryCache, MonitoringConfig monitoringConfig) {
+    public BaseCamelRoute(CamelContext camelContext, MemoryCache<String, Object> memoryCache,
+                          MonitoringConfig monitoringConfig) {
         this.camelContext = camelContext;
         this.memoryCache = memoryCache;
         this.monitoringConfig = monitoringConfig;
@@ -19,9 +20,6 @@ public abstract class BaseCamelRoute extends RouteBuilder {
 
     public abstract void configure();
 
-    /**
-     * Sends an email or logs the email content based on the `sendEmail` flag.
-     */
     protected void sendEmail(Exchange exchange, String recipientEmail) {
         exchange.getMessage().setHeader("sourceRoute", exchange.getFromRouteId());
 
@@ -29,6 +27,4 @@ public abstract class BaseCamelRoute extends RouteBuilder {
         exchange.getContext().createProducerTemplate().send("direct:sendEmail", exchange);
 
     }
-
-
 }

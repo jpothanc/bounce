@@ -3,7 +3,6 @@ package com.ib.it.bounce.routes;
 import com.ib.it.bounce.config.EmailConfig;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -21,11 +20,11 @@ public class EmailRoute extends RouteBuilder {
         from("direct:sendEmail")
                 .routeId("sendEmail-direct")
                 .choice()
-                    .when(exchange -> emailConfig.isEnabled())  // ✅ Only send email if enabled
+                    .when(exchange -> emailConfig.isEnabled())
                         .log("📧 Sending Email Alert...")
-                        .process(this::sendEmail)  // ✅ Calls sendEmail function
+                        .process(this::sendEmail)
                     .otherwise()
-                        .log("🚫 Email sending is disabled in configuration.")
+                        .log("Email sending is disabled in configuration.")
                 .end();
     }
 
@@ -41,7 +40,7 @@ public class EmailRoute extends RouteBuilder {
         String team = exchange.getMessage().getHeader("emailRecipient", String.class);
         String recipient = emailConfig.getEmailRecipient(team);
 
-        // ✅ Simulate email sending
+        // Simulate email sending
         System.out.println("📧 Email Sent:");
         System.out.println("  To: " + recipient);
         System.out.println("  Subject: " + subject);

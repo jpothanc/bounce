@@ -12,7 +12,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Component
 public class DatabaseHealthCheckRoute extends BaseCamelRoute {
     private final AtomicBoolean emailSent = new AtomicBoolean(false);
-    public DatabaseHealthCheckRoute(CamelContext camelContext, MemoryCache<String, Object> memoryCache,
+    public DatabaseHealthCheckRoute(CamelContext camelContext,
+                                    MemoryCache<String, Object> memoryCache,
                                     MonitoringConfig monitoringConfig) {
         super(camelContext, memoryCache, monitoringConfig);
     }
@@ -34,7 +35,7 @@ public class DatabaseHealthCheckRoute extends BaseCamelRoute {
                         .to("jdbc:dataSource")
                         .setBody(constant("{ \"status\": \"UP\" }"))
                             .process(this::handleDatabaseUp)
-                            .log("✅ MySQL is UP!")
+                            .log("MySQL is UP!")
                         .doCatch(Exception.class)
                             .process(this::handleDatabaseError) // Classify error type
                             .choice()
@@ -52,8 +53,8 @@ public class DatabaseHealthCheckRoute extends BaseCamelRoute {
      */
     private void handleDatabaseUp(Exchange exchange) {
         if (emailSent.get()) {
-            log.info("✅ MySQL is UP! Sending Recovery Email...");
-            exchange.getIn().setHeader("emailSubject", "✅ MySQL Service Recovered");
+            log.info("MySQL is UP! Sending Recovery Email...");
+            exchange.getIn().setHeader("emailSubject", "MySQL Service Recovered");
             exchange.getIn().setHeader("emailBody", "MySQL is back online.");
             exchange.getContext().createFluentProducerTemplate().to("direct:sendRecoveryEmail").send();
             emailSent.set(false); // Reset state
@@ -71,15 +72,15 @@ public class DatabaseHealthCheckRoute extends BaseCamelRoute {
         boolean isAuthError = errorMessage.contains("Access denied");
 
         exchange.getIn().setHeader("isAuthError", isAuthError);
-        exchange.getIn().setHeader("emailSubject", isAuthError ? "⚠️ MySQL Authentication Failure" : "🚨 MySQL Service Issue");
+        exchange.getIn().setHeader("emailSubject", isAuthError ? "MySQL Authentication Failure" : "MySQL Service Issue");
         exchange.getIn().setHeader("emailBody", "Error: " + errorMessage);
 
         // Send only one email per issue
         if (!emailSent.get()) {
-            log.info("🚨 First-time failure detected. Sending alert email.");
-            emailSent.set(true); // Mark email as sent
+            log.info("First-time failure detected. Sending alert email.");
+            emailSent.set(true);
         } else {
-            log.info("❌ MySQL is still down, but email already sent. Skipping email.");
+            log.info("MySQL is still down, but email already sent. Skipping email.");
             exchange.setProperty(Exchange.ROUTE_STOP, true); // Stop further processing
         }
     }
