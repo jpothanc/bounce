@@ -1,11 +1,8 @@
 package com.ib.it.bounce.routes;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ib.it.bounce.cache.MemoryCache;
-import com.ib.it.bounce.cache.MemoryCacheImpl;
 import com.ib.it.bounce.models.ProcessInfo;
 import com.sun.management.OperatingSystemMXBean;
-import jakarta.annotation.PostConstruct;
 import org.apache.camel.CamelContext;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.stereotype.Component;
@@ -14,18 +11,17 @@ import java.lang.management.ManagementFactory;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
 @Component
-public class StatusRoute extends RouteBuilder {
+public class PublishProcessRoute extends RouteBuilder {
 
     private final Set<String> MONITORED_APPS = Set.of("notepad.exe", "chrome.exe", "firefox.exe");
     private final CamelContext camelContext;
     private  MemoryCache<String, Object> memoryCache;
 
-    public StatusRoute(CamelContext camelContext, MemoryCache<String, Object> memoryCache) {
+    public PublishProcessRoute(CamelContext camelContext, MemoryCache<String, Object> memoryCache) {
         this.camelContext = camelContext;
         this.memoryCache = memoryCache;
     }
@@ -39,15 +35,6 @@ public class StatusRoute extends RouteBuilder {
         from("timer:statusChecker?period=1000000")
                 .routeId("app-status-checker")
                 .to("direct:checkStatus");
-
-//        from("direct:checkStatus")
-//                .routeId("check-status-direct")
-//                .process(exchange -> {
-//
-//
-//                    exchange.getMessage().setBody("App Status: OK");
-//                })
-//                .log("${body}");
 
         from("direct:checkStatus")
                 .routeId("check-status-direct")
@@ -85,9 +72,4 @@ public class StatusRoute extends RouteBuilder {
 
     }
 
-    @PostConstruct
-    public void disableRoute() throws Exception {
-//        camelContext.getRouteController().stopRoute("app-status-checker");  // 👈 Stops route at startup
-//        System.out.println("⛔ Route 'my-temp-route' has been temporarily disabled!");
-    }
-} 
+}

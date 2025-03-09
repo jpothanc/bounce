@@ -1,5 +1,7 @@
 package com.ib.it.bounce.routes;
 
+import com.ib.it.bounce.config.DatabaseConfig;
+import com.ib.it.bounce.config.EmailConfig;
 import com.ib.it.bounce.config.MonitoringConfig;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
@@ -9,7 +11,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
 public class DatabaseHealthCheckRoute extends RouteBuilder {
-    private static final boolean SEND_EMAIL = false;
     private final AtomicBoolean emailSent = new AtomicBoolean(false);
     private final MonitoringConfig monitoringConfig;
 
@@ -20,40 +21,32 @@ public class DatabaseHealthCheckRoute extends RouteBuilder {
     @Override
     public void configure() {
 
-        getContext().getPropertiesComponent().addInitialProperty("timerPeriod", String.valueOf(monitoringConfig.getDatabaseTimerPeriod()));
+        getContext().getPropertiesComponent().
+                addInitialProperty("timerPeriod", String.valueOf(monitoringConfig.getDatabaseConfig().getTimerPeriod()));
+        getContext().getPropertiesComponent().
+                addInitialProperty("healthCheckQuery", monitoringConfig.getDatabaseConfig().getHealthCheckQuery());
+
         from("timer:databaseHealthCheck?period={{timerPeriod}}")
                 .routeId("check-mysql-health")
                 .choice()
-                .when(exchange -> monitoringConfig.isWithinMonitoringHours())
-                .log("🔍 Running scheduled MySQL health check...")
-                .doTry()
-                .setBody(constant("SELECT 1")) // Run MySQL check
-                .to("jdbc:dataSource")
-                .setBody(constant("{ \"status\": \"UP\" }"))
-                .process(this::handleDatabaseUp)
-                .log("✅ MySQL is UP!")
-                .doCatch(Exception.class)
-                .process(this::handleDatabaseError) // Classify error type
-                .choice()
-                .when(header("isAuthError").isEqualTo(true))
-                .to("direct:sendEmailToDev") // Send email to Development Team for auth failures
-                .otherwise()
-                .to("direct:sendEmailToDBSupport") // Send email to Database Support Team for other issues
-                .end()
-                .setBody(simple("{ \"status\": \"DOWN\" }"))
+                    .when(exchange -> monitoringConfig.getDatabaseConfig().isEnabled() && monitoringConfig.isWithinMonitoringHours())
+                    .log("🔍 Running scheduled MySQL health check...")
+                    .doTry()
+                        .setBody(simple("{{healthCheckQuery}}")) // Run MySQL check
+                        .to("jdbc:dataSource")
+                        .setBody(constant("{ \"status\": \"UP\" }"))
+                            .process(this::handleDatabaseUp)
+                            .log("✅ MySQL is UP!")
+                        .doCatch(Exception.class)
+                            .process(this::handleDatabaseError) // Classify error type
+                            .choice()
+                                .when(header("isAuthError").isEqualTo(true))
+                                    .process(exchange -> sendEmail(exchange, EmailConfig.TEAM_DEVELOPMENT)) // Send email to Development Team for authentication errors
+                                .otherwise()
+                                    .process(exchange -> sendEmail(exchange, EmailConfig.TEAM_DATABASE)) // Send email to Database Support Team for other errors
+                            .end()
+                            .setBody(simple("{ \"status\": \"DOWN\" }"))
                 .end();
-
-        // Email route for Development Team (Authentication Errors)
-        from("direct:sendEmailToDev")
-                .process(exchange -> sendOrLogEmail(exchange, "dev-team@example.com", SEND_EMAIL));
-
-        // Email route for Database Support Team (Other Errors)
-        from("direct:sendEmailToDBSupport")
-                .process(exchange -> sendOrLogEmail(exchange, "db-support@example.com", SEND_EMAIL));
-
-        // Recovery email route
-        from("direct:sendRecoveryEmail")
-                .process(exchange -> sendOrLogEmail(exchange, "dev-team@example.com", SEND_EMAIL)); // Recovery emails go to Dev Team
     }
 
     /**
@@ -96,27 +89,11 @@ public class DatabaseHealthCheckRoute extends RouteBuilder {
     /**
      * Sends an email or logs the email content based on the `sendEmail` flag.
      */
-    private void sendOrLogEmail(Exchange exchange, String recipientEmail, boolean sendEmail) {
-        String subject = exchange.getIn().getHeader("emailSubject", String.class);
-        String body = exchange.getIn().getHeader("emailBody", String.class);
+    private void sendEmail(Exchange exchange, String recipientEmail) {
+        exchange.getMessage().setHeader("sourceRoute", exchange.getFromRouteId());
 
-        if (subject == null || body == null) {
-            log.error("Email subject or body is null. Cannot send email.");
-            return;
-        }
+        exchange.getMessage().setHeader("emailRecipient", recipientEmail);
+        exchange.getContext().createProducerTemplate().send("direct:sendEmail", exchange);
 
-        if (sendEmail) {
-            log.info("📧 Sending Real Email to {}", recipientEmail);
-            exchange.getIn().setHeader("to", recipientEmail);
-            exchange.getIn().setHeader("subject", subject);
-            exchange.getIn().setBody(body);
-            exchange.getContext().createProducerTemplate()
-                    .send("smtp://smtp.example.com?username=your-email@example.com&password=yourpassword", exchange);
-        } else {
-            log.info("\n📧 Simulated Email Notification 📧");
-            log.info("📢 Subject: {}", subject);
-            log.info("📨 Recipient: {}", recipientEmail);
-            log.info("✉️ Body: {}", body);
-        }
     }
 }

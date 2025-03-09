@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
 
 import java.time.DayOfWeek;
 import java.time.LocalTime;
-import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -17,23 +17,30 @@ import java.util.stream.Collectors;
 @Configuration
 @ConfigurationProperties(prefix = "monitoring")
 public class MonitoringConfig {
-
     private String startTime;
     private String endTime;
-    private String allowedDays;
-    private Long databaseTimerPeriod;
+    private List<String> allowedDays;
 
+    private SystemConfig systemConfig;
+    private DatabaseConfig databaseConfig;
+    private ProcessConfig processConfig;
     private LocalTime parsedStartTime;
     private LocalTime parsedEndTime;
     private Set<DayOfWeek> parsedAllowedDays;
 
+    public MonitoringConfig(SystemConfig systemConfig, DatabaseConfig databaseConfig, ProcessConfig processConfig) {
+        this.systemConfig = systemConfig;
+        this.databaseConfig = databaseConfig;
+        this.processConfig = processConfig;
+    }
 
     @PostConstruct
     public void init() {
         try {
             this.parsedStartTime = LocalTime.parse(startTime);
             this.parsedEndTime = LocalTime.parse(endTime);
-            this.parsedAllowedDays = Arrays.stream(allowedDays.split(","))
+
+            this.parsedAllowedDays = allowedDays.stream()
                     .map(String::trim)
                     .map(String::toUpperCase)
                     .map(DayOfWeek::valueOf)
