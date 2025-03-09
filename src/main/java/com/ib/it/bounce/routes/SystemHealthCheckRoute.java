@@ -4,8 +4,8 @@ import com.ib.it.bounce.cache.MemoryCache;
 import com.ib.it.bounce.config.EmailConfig;
 import com.ib.it.bounce.config.MonitoringConfig;
 import com.ib.it.bounce.models.SystemMetrics;
+import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
-import org.apache.camel.builder.RouteBuilder;
 import org.springframework.stereotype.Component;
 import oshi.SystemInfo;
 import oshi.hardware.CentralProcessor;
@@ -19,16 +19,11 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
-public class SystemHealthCheckRoute extends RouteBuilder {
-
-    private final MonitoringConfig monitoringConfig;
-    private MemoryCache<String, Object> memoryCache;
+public class SystemHealthCheckRoute extends BaseCamelRoute {
     private final AtomicBoolean emailSent = new AtomicBoolean(false);
-
-    public SystemHealthCheckRoute(MemoryCache<String, Object> memoryCache, MonitoringConfig monitoringConfig) {
-
-        this.memoryCache = memoryCache;
-        this.monitoringConfig = monitoringConfig;
+    public SystemHealthCheckRoute(CamelContext camelContext,
+            MemoryCache<String, Object> memoryCache, MonitoringConfig monitoringConfig) {
+        super(camelContext, memoryCache, monitoringConfig);
     }
 
     @Override

@@ -1,22 +1,21 @@
 package com.ib.it.bounce.routes;
 
+import com.ib.it.bounce.cache.MemoryCache;
 import com.ib.it.bounce.config.MonitoringConfig;
-import com.ib.it.bounce.config.ProcessConfig;
 import com.ib.it.bounce.config.ProcessItem;
+import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
-import org.apache.camel.builder.RouteBuilder;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.List;
 
 @Component
-public class ProcessHealthCheckRoute extends RouteBuilder {
-
-    private final MonitoringConfig monitoringConfig;
-
-    public ProcessHealthCheckRoute(MonitoringConfig monitoringConfig) {
-        this.monitoringConfig = monitoringConfig;
+public class ProcessHealthCheckRoute extends BaseCamelRoute {
+    public ProcessHealthCheckRoute(CamelContext camelContext,
+                                   MemoryCache<String, Object> memoryCache,
+                                   MonitoringConfig monitoringConfig) {
+       super(camelContext, memoryCache, monitoringConfig);
     }
 
     @Override

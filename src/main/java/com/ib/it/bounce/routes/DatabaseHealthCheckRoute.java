@@ -1,23 +1,21 @@
 package com.ib.it.bounce.routes;
 
-import com.ib.it.bounce.config.DatabaseConfig;
+import com.ib.it.bounce.cache.MemoryCache;
 import com.ib.it.bounce.config.EmailConfig;
 import com.ib.it.bounce.config.MonitoringConfig;
+import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
-import org.apache.camel.builder.RouteBuilder;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
-public class DatabaseHealthCheckRoute extends RouteBuilder {
+public class DatabaseHealthCheckRoute extends BaseCamelRoute {
     private final AtomicBoolean emailSent = new AtomicBoolean(false);
-    private final MonitoringConfig monitoringConfig;
-
-    public DatabaseHealthCheckRoute(MonitoringConfig monitoringConfig) {
-        this.monitoringConfig = monitoringConfig;
+    public DatabaseHealthCheckRoute(CamelContext camelContext, MemoryCache<String, Object> memoryCache,
+                                    MonitoringConfig monitoringConfig) {
+        super(camelContext, memoryCache, monitoringConfig);
     }
-
     @Override
     public void configure() {
 
@@ -84,16 +82,5 @@ public class DatabaseHealthCheckRoute extends RouteBuilder {
             log.info("❌ MySQL is still down, but email already sent. Skipping email.");
             exchange.setProperty(Exchange.ROUTE_STOP, true); // Stop further processing
         }
-    }
-
-    /**
-     * Sends an email or logs the email content based on the `sendEmail` flag.
-     */
-    private void sendEmail(Exchange exchange, String recipientEmail) {
-        exchange.getMessage().setHeader("sourceRoute", exchange.getFromRouteId());
-
-        exchange.getMessage().setHeader("emailRecipient", recipientEmail);
-        exchange.getContext().createProducerTemplate().send("direct:sendEmail", exchange);
-
     }
 }
