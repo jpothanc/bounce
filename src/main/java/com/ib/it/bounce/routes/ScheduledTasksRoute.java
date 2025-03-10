@@ -4,8 +4,11 @@ import com.ib.it.bounce.cache.MemoryCache;
 import com.ib.it.bounce.config.JobConfig;
 import com.ib.it.bounce.config.MonitoringConfig;
 import com.ib.it.bounce.config.SchedulerConfig;
+import com.ib.it.bounce.services.ScriptExecutor;
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -14,6 +17,11 @@ import java.util.List;
 @Component
 public class ScheduledTasksRoute extends BaseCamelRoute {
     private final SchedulerConfig schedulerConfig;
+    @Autowired
+    ScriptExecutor scriptExecutor;
+
+    @Value("${spring.profiles.active:dev}")
+    private String activeProfile;
 
     public ScheduledTasksRoute(CamelContext camelContext,
                                MemoryCache<String, Object> memoryCache,
@@ -36,10 +44,11 @@ public class ScheduledTasksRoute extends BaseCamelRoute {
                 log.info("Job '{}' is disabled. Skipping...", job.getName());
                 continue;
             }
-            from("quartz://job-" + job.getName() + "?cron=" + job.getCronExpression())
+            from(getQuartzSchedule(job))
                     .routeId("job-" + job.getName())
                     .setHeader("jobName", constant(job.getName()))
                     .setHeader("scriptPath", constant(schedulerConfig.getJobsPath() + File.separator + job.getScript()))
+                    .setHeader("scriptArgs", constant(job.getArgs()))
                     .log("Running Job: ${header.jobName}")
                     .process(this::executeJob)
                     .choice()
@@ -52,20 +61,16 @@ public class ScheduledTasksRoute extends BaseCamelRoute {
 
     }
     private void executeJob(Exchange exchange) {
-        String scriptPath = exchange.getIn().getHeader("scriptPath", String.class);
-        try {
-            ProcessBuilder processBuilder = new ProcessBuilder("/bin/bash", scriptPath);
-            processBuilder.redirectErrorStream(true);
-            Process process = processBuilder.start();
+        scriptExecutor.executeJob(exchange);
+    }
 
-            String result = new String(process.getInputStream().readAllBytes());
-            int exitCode = process.waitFor();
-
-            exchange.getIn().setHeader("jobSuccess", exitCode == 0);
-            exchange.getIn().setBody(result);
-        } catch (Exception e) {
-            exchange.getIn().setHeader("jobSuccess", false);
-            exchange.getIn().setBody("Error executing script: " + e.getMessage());
+    private String getQuartzSchedule(JobConfig job) {
+        String env = activeProfile;
+        if ("dev".equalsIgnoreCase(env)) {
+            return "timer://job-" + job.getName() + "?repeatCount=1&delay=0";
+        } else {
+            return "quartz://job-" + job.getName() + "?cron=" + job.getCronExpression();
         }
     }
+
 }

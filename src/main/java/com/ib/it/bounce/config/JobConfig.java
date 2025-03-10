@@ -12,4 +12,5 @@ public class JobConfig {
     private boolean enabled;
     private String cronExpression;
     private String script;
+    private String args;
 }
