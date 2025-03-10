@@ -48,7 +48,7 @@
         timer-period: 60000
 
     database:
-      enabled: false
+      enabled: true
       timer-period: 60000
       health-check-query: "SELECT 1"
 
@@ -59,7 +59,7 @@
         - name: "java"
           install-path: "C:/Program Files/Java/jdk/bin/java.exe"
           start-command: "java -jar app.jar"
-          
+
         - name: "notepad.exe"
           install-path: "C:/Windows/System32/notepad.exe"
           start-command: "notepad"

@@ -4,28 +4,28 @@ import com.ib.it.bounce.cache.MemoryCache;
 import com.ib.it.bounce.config.EmailConfig;
 import com.ib.it.bounce.config.MonitoringConfig;
 import com.ib.it.bounce.models.SystemMetrics;
+import com.ib.it.bounce.services.SystemService;
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import oshi.SystemInfo;
-import oshi.hardware.CentralProcessor;
-import oshi.hardware.GlobalMemory;
-import oshi.hardware.HardwareAbstractionLayer;
-import oshi.software.os.OSFileStore;
 
-import java.io.File;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
 public class SystemHealthCheckRoute extends BaseCamelRoute {
     private final AtomicBoolean emailSent = new AtomicBoolean(false);
+    @Autowired
+    SystemService systemService;
     public SystemHealthCheckRoute(CamelContext camelContext,
             MemoryCache<String, Object> memoryCache, MonitoringConfig monitoringConfig) {
         super(camelContext, memoryCache, monitoringConfig);
+    }
+
+    @Override
+    public boolean shouldMonitor(Exchange exchange) {
+        return monitoringConfig.getSystemConfig().isEnabled() && monitoringConfig.isWithinMonitoringHours();
     }
 
     @Override
@@ -37,7 +37,7 @@ public class SystemHealthCheckRoute extends BaseCamelRoute {
         from("timer:systemInfoTimer?period={{timerPeriod}}")
                 .routeId("system-info-route")
                 .choice()
-                    .when(exchange -> monitoringConfig.getSystemConfig().isEnabled() && monitoringConfig.isWithinMonitoringHours())
+                    .when(exchange -> shouldMonitor(exchange))
                         .to("direct:fetchSystemInfo")
                         .log("System Info: ${body}")
                     .otherwise()
@@ -48,46 +48,11 @@ public class SystemHealthCheckRoute extends BaseCamelRoute {
         from("direct:fetchSystemInfo")
                 .routeId("fetchSystemInfo-direct")
                 .process(exchange -> {
-                    SystemMetrics system = fetchSystemMetrics();
+                    SystemMetrics system = systemService.getSystemMetrics();
                     exchange.getMessage().setBody(system.toString());
                     this.memoryCache.put("systemMetrics", system);
                     checkAndSendSystemAlerts(system, exchange);
                 });
-    }
-
-    private SystemMetrics fetchSystemMetrics() {
-        HardwareAbstractionLayer hardware = new SystemInfo().getHardware();
-        GlobalMemory memory = hardware.getMemory();
-        CentralProcessor processor = hardware.getProcessor();
-        List<OSFileStore> diskStores = new SystemInfo().getOperatingSystem().getFileSystem().getFileStores();
-        File root = new File("/");
-
-        File tempDir = new File(System.getProperty("java.io.tmpdir"));
-        long totalTempSpace = tempDir.getTotalSpace();
-
-        String hostname = "Unknown";
-        String ipAddress = "Unknown";
-
-        try {
-            InetAddress inetAddress = InetAddress.getLocalHost();
-            hostname = inetAddress.getHostName();
-            ipAddress = inetAddress.getHostAddress();
-        } catch (UnknownHostException e) {
-            System.err.println("Unable to get hostname and IP: " + e.getMessage());
-        }
-
-        return SystemMetrics.builder()
-                .hostname(hostname)
-                .ipAddress(ipAddress)
-                .cpuUsage(processor.getSystemCpuLoad(1000) * 100)
-                .totalMemory(memory.getTotal())
-                .freeMemory(memory.getAvailable())
-                .usedMemory(memory.getTotal() - memory.getAvailable())
-                .totalDiskSpace(root.getTotalSpace())
-                .freeDiskSpace(root.getFreeSpace())
-                .totalTempSpace(totalTempSpace)
-                .usedDiskSpace(root.getTotalSpace() - root.getFreeSpace())
-                .build();
     }
 
     private void checkAndSendSystemAlerts(SystemMetrics system, Exchange exchange) {

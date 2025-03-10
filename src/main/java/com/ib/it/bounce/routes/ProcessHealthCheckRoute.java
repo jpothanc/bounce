@@ -17,16 +17,22 @@ public class ProcessHealthCheckRoute extends BaseCamelRoute {
                                    MonitoringConfig monitoringConfig) {
        super(camelContext, memoryCache, monitoringConfig);
     }
-
+    @Override
+    public boolean shouldMonitor(Exchange exchange) {
+        return monitoringConfig.getProcessConfig().isEnabled() && monitoringConfig.isWithinMonitoringHours();
+    }
     @Override
     public void configure() {
         log.info("Configuring {}...", this.getClass().getSimpleName());
         getContext().getPropertiesComponent().
                 addInitialProperty("timerPeriod", String.valueOf(monitoringConfig.getDatabaseConfig().getTimerPeriod()));
-        from("timer:processHealthCheck?period={{timerPeriod}}")
+
+        setProperty(TIMER_PERIOD_KEY, monitoringConfig.getDatabaseConfig().getTimerPeriod());
+
+        from("timer:processHealthCheck?period={{" + TIMER_PERIOD_KEY + "}}")
                 .routeId("process-health-check")
                 .choice()
-                .when(exchange -> monitoringConfig.getProcessConfig().isEnabled() && monitoringConfig.isWithinMonitoringHours())
+                .when(exchange -> shouldMonitor(exchange))
                     .process(this::checkAndRestartProcesses)
                 .otherwise()
                     .log("🚫 Process monitoring is disabled.")

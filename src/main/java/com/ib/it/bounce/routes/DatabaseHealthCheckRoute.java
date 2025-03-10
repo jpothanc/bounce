@@ -11,29 +11,35 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
 public class DatabaseHealthCheckRoute extends BaseCamelRoute {
+
+    private static final String HEALTH_CHECK_QUERY_KEY = "healthCheckQuery";
     private final AtomicBoolean emailSent = new AtomicBoolean(false);
     public DatabaseHealthCheckRoute(CamelContext camelContext,
                                     MemoryCache<String, Object> memoryCache,
                                     MonitoringConfig monitoringConfig) {
         super(camelContext, memoryCache, monitoringConfig);
     }
+
+    @Override
+    public boolean shouldMonitor(Exchange exchange) {
+        return monitoringConfig.getDatabaseConfig().isEnabled() && monitoringConfig.isWithinMonitoringHours();
+    }
     @Override
     public void configure() {
 
         log.info("Configuring {}...", this.getClass().getSimpleName());
 
-        getContext().getPropertiesComponent().
-                addInitialProperty("timerPeriod", String.valueOf(monitoringConfig.getDatabaseConfig().getTimerPeriod()));
-        getContext().getPropertiesComponent().
-                addInitialProperty("healthCheckQuery", monitoringConfig.getDatabaseConfig().getHealthCheckQuery());
+        // Set properties
+        setProperty(TIMER_PERIOD_KEY, monitoringConfig.getDatabaseConfig().getTimerPeriod());
+        setProperty(HEALTH_CHECK_QUERY_KEY, monitoringConfig.getDatabaseConfig().getHealthCheckQuery());
 
-        from("timer:databaseHealthCheck?period={{timerPeriod}}")
+        from("timer:databaseHealthCheck?period={{" + TIMER_PERIOD_KEY + "}}")
                 .routeId("check-mysql-health")
                 .choice()
-                    .when(exchange -> monitoringConfig.getDatabaseConfig().isEnabled() && monitoringConfig.isWithinMonitoringHours())
+                    .when(exchange -> shouldMonitor(exchange))
                     .log("🔍 Running scheduled MySQL health check...")
                     .doTry()
-                        .setBody(simple("{{healthCheckQuery}}")) // Run MySQL check
+                        .setBody(simple("{{" + HEALTH_CHECK_QUERY_KEY + "}}"))
                         .to("jdbc:dataSource")
                         .setBody(constant("{ \"status\": \"UP\" }"))
                             .process(this::handleDatabaseUp)
@@ -42,9 +48,9 @@ public class DatabaseHealthCheckRoute extends BaseCamelRoute {
                             .process(this::handleDatabaseError) // Classify error type
                             .choice()
                                 .when(header("isAuthError").isEqualTo(true))
-                                    .process(exchange -> sendEmail(exchange, EmailConfig.TEAM_DEVELOPMENT)) // Send email to Development Team for authentication errors
+                                    .process(exchange -> sendEmail(exchange, EmailConfig.TEAM_DEVELOPMENT))
                                 .otherwise()
-                                    .process(exchange -> sendEmail(exchange, EmailConfig.TEAM_DATABASE)) // Send email to Database Support Team for other errors
+                                    .process(exchange -> sendEmail(exchange, EmailConfig.TEAM_DATABASE))
                             .end()
                             .setBody(simple("{ \"status\": \"DOWN\" }"))
                 .end();

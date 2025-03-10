@@ -16,6 +16,7 @@ import java.util.List;
 
 @Component
 public class ScheduledTasksRoute extends BaseCamelRoute {
+    private static final int THREAD_POOL_SIZE = 5;
     private final SchedulerConfig schedulerConfig;
     @Autowired
     ScriptExecutor scriptExecutor;
@@ -28,6 +29,11 @@ public class ScheduledTasksRoute extends BaseCamelRoute {
                                MonitoringConfig monitoringConfig) {
         super(camelContext, memoryCache, monitoringConfig);
         this.schedulerConfig = monitoringConfig.getSchedulerConfig();
+    }
+
+    @Override
+    public boolean shouldMonitor(Exchange exchange) {
+        return schedulerConfig.isEnabled();
     }
 
     @Override
@@ -50,6 +56,7 @@ public class ScheduledTasksRoute extends BaseCamelRoute {
                     .setHeader("scriptPath", constant(schedulerConfig.getJobsPath() + File.separator + job.getScript()))
                     .setHeader("scriptArgs", constant(job.getArgs()))
                     .log("Running Job: ${header.jobName}")
+                    .threads(THREAD_POOL_SIZE)  // Enables parallel execution
                     .process(this::executeJob)
                     .choice()
                         .when(header("jobSuccess").isEqualTo(true))

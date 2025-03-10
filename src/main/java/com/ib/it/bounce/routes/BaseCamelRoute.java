@@ -7,6 +7,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 
 public abstract class BaseCamelRoute extends RouteBuilder {
+    protected static final String TIMER_PERIOD_KEY = "timerPeriod";
     protected final CamelContext camelContext;
     protected final MemoryCache<String, Object> memoryCache;
     protected final MonitoringConfig monitoringConfig;
@@ -27,4 +28,10 @@ public abstract class BaseCamelRoute extends RouteBuilder {
         exchange.getContext().createProducerTemplate().send("direct:sendEmail", exchange);
 
     }
+    protected void setProperty(String key, Object value) {
+        getContext().getPropertiesComponent().addInitialProperty(key, String.valueOf(value));
+    }
+
+    public abstract boolean shouldMonitor(Exchange exchange);
+
 }

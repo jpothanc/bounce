@@ -5,6 +5,7 @@ import com.ib.it.bounce.config.MonitoringConfig;
 import com.ib.it.bounce.models.ProcessInfo;
 import com.sun.management.OperatingSystemMXBean;
 import org.apache.camel.CamelContext;
+import org.apache.camel.Exchange;
 import org.springframework.stereotype.Component;
 
 import java.lang.management.ManagementFactory;
@@ -29,6 +30,11 @@ public class PublishProcessRoute extends BaseCamelRoute {
         return MONITORED_APPS.contains(processName);
     }
 
+
+    @Override
+    public boolean shouldMonitor(Exchange exchange) {
+        return true;
+    }
     @Override
     public void configure() {
         log.info("Configuring {}...", this.getClass().getSimpleName());
