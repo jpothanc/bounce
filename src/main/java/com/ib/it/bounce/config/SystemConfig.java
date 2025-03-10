@@ -11,5 +11,8 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "monitoring.system")
 public class SystemConfig {
     private boolean enabled;
+    private int cpuUsageThreshold;
+    private int memoryUsageThreshold;
+    private int diskUsageThreshold;
     private Long timerPeriod;
 }

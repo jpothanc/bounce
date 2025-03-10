@@ -24,14 +24,20 @@ public class MonitoringConfig {
     private SystemConfig systemConfig;
     private DatabaseConfig databaseConfig;
     private ProcessConfig processConfig;
+    private SchedulerConfig schedulerConfig;
+
     private LocalTime parsedStartTime;
     private LocalTime parsedEndTime;
     private Set<DayOfWeek> parsedAllowedDays;
 
-    public MonitoringConfig(SystemConfig systemConfig, DatabaseConfig databaseConfig, ProcessConfig processConfig) {
+    public MonitoringConfig(SystemConfig systemConfig,
+                            DatabaseConfig databaseConfig,
+                            ProcessConfig processConfig,
+                            SchedulerConfig schedulerConfig) {
         this.systemConfig = systemConfig;
         this.databaseConfig = databaseConfig;
         this.processConfig = processConfig;
+        this.schedulerConfig = schedulerConfig;
     }
 
     @PostConstruct

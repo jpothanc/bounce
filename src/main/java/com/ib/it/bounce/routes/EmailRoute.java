@@ -16,7 +16,7 @@ public class EmailRoute extends RouteBuilder {
 
     @Override
     public void configure() {
-
+        log.info("Configuring {}...", this.getClass().getSimpleName());
         from("direct:sendEmail")
                 .routeId("sendEmail-direct")
                 .choice()

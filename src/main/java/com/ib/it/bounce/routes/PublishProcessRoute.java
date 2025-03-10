@@ -31,6 +31,7 @@ public class PublishProcessRoute extends BaseCamelRoute {
 
     @Override
     public void configure() {
+        log.info("Configuring {}...", this.getClass().getSimpleName());
         from("timer:statusChecker?period=1000000")
                 .routeId("app-status-checker")
                 .to("direct:checkStatus");

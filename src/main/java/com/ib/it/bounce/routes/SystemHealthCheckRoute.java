@@ -17,6 +17,7 @@ import java.io.File;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
@@ -29,7 +30,7 @@ public class SystemHealthCheckRoute extends BaseCamelRoute {
 
     @Override
     public void configure() {
-
+        log.info("Configuring {}...", this.getClass().getSimpleName());
         getContext().getPropertiesComponent().
                 addInitialProperty("timerPeriod", String.valueOf(monitoringConfig.getSystemConfig().getTimerPeriod()));
 
@@ -50,7 +51,7 @@ public class SystemHealthCheckRoute extends BaseCamelRoute {
                     SystemMetrics system = fetchSystemMetrics();
                     exchange.getMessage().setBody(system.toString());
                     this.memoryCache.put("systemMetrics", system);
-                    checkAndSendMemoryAlert(system, exchange);
+                    checkAndSendSystemAlerts(system, exchange);
                 });
     }
 
@@ -89,25 +90,52 @@ public class SystemHealthCheckRoute extends BaseCamelRoute {
                 .build();
     }
 
-    private void checkAndSendMemoryAlert(SystemMetrics system, Exchange exchange) {
-        long freeMemoryMB = system.getFreeMemory() / (1024 * 1024);
-        boolean isLowMemory = freeMemoryMB < 500;
-        String emailSubject = "";
-        String emailBody = "";
+    private void checkAndSendSystemAlerts(SystemMetrics system, Exchange exchange) {
+        long freeDiskGB = system.getFreeDiskSpace() / (1024 * 1024 * 1024);
+        double cpuUsage = system.getCpuUsage();
+        String hostname = system.getHostname();
 
-        if (isLowMemory && !emailSent.get()) {
-            emailSubject =  system.getHostname() + " : Low Memory Alert!";
-            emailBody = "Warning: Free memory is low (" + freeMemoryMB + "MB).\n" +
-                    "Please check the system.";
+        double freeMemoryPercentage = ((double) system.getFreeMemory() / system.getTotalMemory()) * 100;
+        long freeMemoryMB = system.getFreeMemory() / (1024 * 1024);
+        double freeDiskPercentage = ((double) system.getFreeDiskSpace() / system.getTotalDiskSpace()) * 100;
+
+        boolean isLowMemory = freeMemoryPercentage > monitoringConfig.getSystemConfig().getMemoryUsageThreshold();
+        boolean isHighCpu = cpuUsage > monitoringConfig.getSystemConfig().getCpuUsageThreshold();
+        boolean isLowDisk = freeDiskPercentage > monitoringConfig.getSystemConfig().getDiskUsageThreshold();
+
+
+        StringBuilder alertBody = new StringBuilder();
+
+        if (isLowMemory) {
+            log.warn("Low Memory: Free memory is low ({} MB).", freeMemoryMB);
+            alertBody.append("Low Memory: Free memory is low (").append(freeMemoryMB).append(" MB).\n");
+        }
+        if (isHighCpu) {
+            log.warn("High CPU Usage: CPU usage is high ({}%).", cpuUsage);
+            alertBody.append("High CPU Usage: CPU usage is high (").append(cpuUsage).append("%).\n");
+        }
+        if (isLowDisk) {
+            log.warn("Low Disk Space: Free disk space is low ({} GB).", freeDiskGB);
+            alertBody.append("Low Disk Space: Free disk space is low (").append(freeDiskGB).append(" GB).\n");
+        }
+
+        if (alertBody.length() > 0 && !emailSent.get()) {
+            String subject = hostname + " : System Alerts!";
+            sendAlert(exchange, subject, alertBody.toString());
             emailSent.set(true);
-        } else if (!isLowMemory && emailSent.get()) {
-            emailSubject = system.getHostname() + ": Memory Recovered";
-            emailBody = "Memory is back to normal.";
+        } else if (alertBody.length() == 0 && emailSent.get()) {
+            sendAlert(exchange, hostname + ": System Recovered", "All system metrics are back to normal.");
             emailSent.set(false);
         }
-        exchange.getMessage().setHeader("sourceRoute", exchange.getFromRouteId());
-        exchange.getMessage().setHeader("emailSubject", emailSubject);
-        exchange.getMessage().setHeader("emailBody", emailBody);
+    }
+
+    private void sendAlert(Exchange exchange, String subject, String body) {
+        exchange.getMessage().setHeaders(Map.of(
+                "sourceRoute", exchange.getFromRouteId(),
+                "emailSubject", subject,
+                "emailBody", body
+        ));
+        System.out.println("📧 Sending Email: " + subject);
         sendEmail(exchange, EmailConfig.TEAM_DEVELOPMENT);
     }
 

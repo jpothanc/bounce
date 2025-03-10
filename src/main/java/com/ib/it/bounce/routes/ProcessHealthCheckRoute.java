@@ -20,6 +20,7 @@ public class ProcessHealthCheckRoute extends BaseCamelRoute {
 
     @Override
     public void configure() {
+        log.info("Configuring {}...", this.getClass().getSimpleName());
         getContext().getPropertiesComponent().
                 addInitialProperty("timerPeriod", String.valueOf(monitoringConfig.getDatabaseConfig().getTimerPeriod()));
         from("timer:processHealthCheck?period={{timerPeriod}}")

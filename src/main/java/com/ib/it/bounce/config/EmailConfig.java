@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
 @Getter
 @Setter
 @Configuration
-@ConfigurationProperties(prefix = "email")  // ✅ Binds "email" properties
+@ConfigurationProperties(prefix = "email")
 public class EmailConfig {
 
     public static final String TEAM_DEVELOPMENT = "development";

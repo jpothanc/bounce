@@ -42,7 +42,11 @@
       - SUNDAY
     system:
         enabled: true
+        cpu-usage-threshold: 90
+        memory-usage-threshold: 90
+        disk-usage-threshold: 90
         timer-period: 60000
+
     database:
       enabled: true
       timer-period: 60000
@@ -58,23 +62,21 @@
         - name: "notepad.exe"
           install-path: "C:/Windows/System32/notepad.exe"
           start-command: "notepad"
-    rest:
+
+    scheduler:
       enabled: true
-      timer-period: 60000
-      items:
-        - name: "Google"
-          url: "http://www.google.com"
-          method: "GET"
-          expected-status-code: 200
-          expected-response: "OK"
-          headers:
-            Authorization: "Bearer 1234567890"
-        - name: "Actuator"
-          url: "http://localhost:9001/actuator/health"
-          method: "GET"
-          expected-status-code: 200
-          expected-response: "UP"
-          headers:
+      jobs-path: "classpath:jobs"
+      jobs:
+        - name: "job1"
+          enabled: true
+          cron-expression: "0 33 15 ? * MON-FRI *"
+          script: "job1.sh"
+        - name: "job2"
+          enabled: false
+          cron-expression: "0 15 7 ? * MON-FRI *"
+          script: "job2.sh"
+
+
 
 
 
