@@ -4,7 +4,7 @@
     datasource:
       url: jdbc:mysql://localhost:3306/vending_machine
       username: root
-      password: admin
+      password: admin1
       driver-class-name: com.mysql.cj.jdbc.Driver
 
   server:
@@ -40,6 +40,7 @@
       - THURSDAY
       - FRIDAY
       - SUNDAY
+    cache-expiry: 3
     system:
         enabled: false
         cpu-usage-threshold: 90

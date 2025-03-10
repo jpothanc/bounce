@@ -1,11 +1,8 @@
 package com.ib.it.bounce.routes;
 
-import com.ib.it.bounce.cache.MemoryCache;
 import com.ib.it.bounce.config.EmailConfig;
-import com.ib.it.bounce.config.MonitoringConfig;
 import com.ib.it.bounce.models.SystemMetrics;
 import com.ib.it.bounce.services.SystemService;
-import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -18,10 +15,7 @@ public class SystemHealthCheckRoute extends BaseCamelRoute {
     private final AtomicBoolean emailSent = new AtomicBoolean(false);
     @Autowired
     SystemService systemService;
-    public SystemHealthCheckRoute(CamelContext camelContext,
-            MemoryCache<String, Object> memoryCache, MonitoringConfig monitoringConfig) {
-        super(camelContext, memoryCache, monitoringConfig);
-    }
+
 
     @Override
     public boolean shouldMonitor(Exchange exchange) {
@@ -101,7 +95,7 @@ public class SystemHealthCheckRoute extends BaseCamelRoute {
                 "emailBody", body
         ));
         System.out.println("📧 Sending Email: " + subject);
-        sendEmail(exchange, EmailConfig.TEAM_DEVELOPMENT);
+        emailService.send(exchange, EmailConfig.TEAM_DEVELOPMENT);
     }
 
 }

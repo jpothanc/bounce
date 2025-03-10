@@ -20,6 +20,7 @@ public class MonitoringConfig {
     private String startTime;
     private String endTime;
     private List<String> allowedDays;
+    private int cacheExpiry;
 
     private SystemConfig systemConfig;
     private DatabaseConfig databaseConfig;

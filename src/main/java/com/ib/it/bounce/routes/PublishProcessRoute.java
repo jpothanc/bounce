@@ -1,10 +1,7 @@
 package com.ib.it.bounce.routes;
 
-import com.ib.it.bounce.cache.MemoryCache;
-import com.ib.it.bounce.config.MonitoringConfig;
 import com.ib.it.bounce.models.ProcessInfo;
 import com.sun.management.OperatingSystemMXBean;
-import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.springframework.stereotype.Component;
 
@@ -20,11 +17,7 @@ public class PublishProcessRoute extends BaseCamelRoute {
 
     private final Set<String> MONITORED_APPS = Set.of("notepad.exe", "chrome.exe", "firefox.exe");
 
-    public PublishProcessRoute(CamelContext camelContext,
-                               MemoryCache<String, Object> memoryCache,
-                               MonitoringConfig monitoringConfig) {
-        super(camelContext, memoryCache, monitoringConfig);
-    }
+
 
     private boolean isMonitoredApp(String processName) {
         return MONITORED_APPS.contains(processName);

@@ -11,14 +11,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
 public class DatabaseHealthCheckRoute extends BaseCamelRoute {
-
     private static final String HEALTH_CHECK_QUERY_KEY = "healthCheckQuery";
     private final AtomicBoolean emailSent = new AtomicBoolean(false);
-    public DatabaseHealthCheckRoute(CamelContext camelContext,
-                                    MemoryCache<String, Object> memoryCache,
-                                    MonitoringConfig monitoringConfig) {
-        super(camelContext, memoryCache, monitoringConfig);
-    }
 
     @Override
     public boolean shouldMonitor(Exchange exchange) {
@@ -48,9 +42,9 @@ public class DatabaseHealthCheckRoute extends BaseCamelRoute {
                             .process(this::handleDatabaseError) // Classify error type
                             .choice()
                                 .when(header("isAuthError").isEqualTo(true))
-                                    .process(exchange -> sendEmail(exchange, EmailConfig.TEAM_DEVELOPMENT))
+                                    .process(exchange -> emailService.send(exchange, EmailConfig.TEAM_DEVELOPMENT))
                                 .otherwise()
-                                    .process(exchange -> sendEmail(exchange, EmailConfig.TEAM_DATABASE))
+                                    .process(exchange -> emailService.send(exchange, EmailConfig.TEAM_DATABASE))
                             .end()
                             .setBody(simple("{ \"status\": \"DOWN\" }"))
                 .end();

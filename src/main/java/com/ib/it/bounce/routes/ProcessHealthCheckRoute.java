@@ -1,9 +1,6 @@
 package com.ib.it.bounce.routes;
 
-import com.ib.it.bounce.cache.MemoryCache;
-import com.ib.it.bounce.config.MonitoringConfig;
 import com.ib.it.bounce.config.ProcessItem;
-import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.springframework.stereotype.Component;
 
@@ -12,11 +9,7 @@ import java.util.List;
 
 @Component
 public class ProcessHealthCheckRoute extends BaseCamelRoute {
-    public ProcessHealthCheckRoute(CamelContext camelContext,
-                                   MemoryCache<String, Object> memoryCache,
-                                   MonitoringConfig monitoringConfig) {
-       super(camelContext, memoryCache, monitoringConfig);
-    }
+
     @Override
     public boolean shouldMonitor(Exchange exchange) {
         return monitoringConfig.getProcessConfig().isEnabled() && monitoringConfig.isWithinMonitoringHours();

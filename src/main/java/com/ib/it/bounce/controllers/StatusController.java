@@ -1,7 +1,8 @@
 package com.ib.it.bounce.controllers;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ib.it.bounce.cache.MemoryCache;
+import com.ib.it.bounce.internal.Utils;
+import com.ib.it.bounce.models.Alert;
 import com.ib.it.bounce.models.ProcessInfo;
 import com.ib.it.bounce.models.SystemMetrics;
 import org.apache.camel.ProducerTemplate;
@@ -39,4 +40,11 @@ public class StatusController {
                 ResponseEntity.ok(SystemMetrics.builder().build());
 
     }
-} 
+
+    @GetMapping("/email-alerts")
+    public ResponseEntity<Alert> getEmailAlerts() {
+        Alert alert =  (Alert) memoryCache.get(Utils.createCacheKey("emailAlerts"));
+        return alert != null ? ResponseEntity.ok(alert) : ResponseEntity.ok(Alert.builder().build());
+
+    }
+}

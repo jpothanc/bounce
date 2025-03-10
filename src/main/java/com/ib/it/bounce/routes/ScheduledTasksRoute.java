@@ -1,11 +1,8 @@
 package com.ib.it.bounce.routes;
 
-import com.ib.it.bounce.cache.MemoryCache;
 import com.ib.it.bounce.config.JobConfig;
-import com.ib.it.bounce.config.MonitoringConfig;
 import com.ib.it.bounce.config.SchedulerConfig;
 import com.ib.it.bounce.services.ScriptExecutor;
-import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,19 +14,21 @@ import java.util.List;
 @Component
 public class ScheduledTasksRoute extends BaseCamelRoute {
     private static final int THREAD_POOL_SIZE = 5;
-    private final SchedulerConfig schedulerConfig;
+    private SchedulerConfig schedulerConfig;
+    private  ScriptExecutor scriptExecutor;
+
     @Autowired
-    ScriptExecutor scriptExecutor;
+    public void setSchedulerConfig(SchedulerConfig schedulerConfig) {
+        this.schedulerConfig = schedulerConfig;
+    }
+    @Autowired
+    public void setScriptExecutor(ScriptExecutor scriptExecutor) {
+        this.scriptExecutor = scriptExecutor;
+    }
 
     @Value("${spring.profiles.active:dev}")
     private String activeProfile;
 
-    public ScheduledTasksRoute(CamelContext camelContext,
-                               MemoryCache<String, Object> memoryCache,
-                               MonitoringConfig monitoringConfig) {
-        super(camelContext, memoryCache, monitoringConfig);
-        this.schedulerConfig = monitoringConfig.getSchedulerConfig();
-    }
 
     @Override
     public boolean shouldMonitor(Exchange exchange) {
